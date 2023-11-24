@@ -1,7 +1,13 @@
 use num_bigint::BigUint;
 use rand::Rng;
 
+use crate::auth::auth::AuthService;
+
+mod auth;
+
 fn main() {
+    let _svc = auth::auth::AuthService{};
+
     println!("** Chaum-Pedersen Sigma Protocol **");
 
     // first, set a very large prime number 

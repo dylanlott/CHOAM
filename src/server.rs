@@ -4,6 +4,7 @@ use auth::zkp_auth::{
     AuthenticationAnswerRequest, AuthenticationAnswerResponse, AuthenticationChallengeRequest,
     AuthenticationChallengeResponse, RegisterRequest, RegisterResponse,
 };
+use rand::Rng;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -33,6 +34,7 @@ impl Auth for AuthService {
                 username: req.user.to_string(),
                 y1: req.y1.into(),
                 y2: req.y2.into(),
+                challenge: 0,
             },
         )
         .await;
@@ -43,7 +45,33 @@ impl Auth for AuthService {
         &self,
         request: Request<AuthenticationChallengeRequest>,
     ) -> Result<Response<AuthenticationChallengeResponse>, Status> {
-        panic!("TODO")
+        let req = request.into_inner();
+
+        // TODO handle r1 and r2 
+
+        let username = req.user.clone();
+        println!("received authentication challenge request");
+
+        match self.get_user(req.user).await {
+            Some(user) => {
+                let challenge: i64 = rand::thread_rng().gen_range(1u32..1000).into();
+                // lock users collection & update user's challenge value for later use during verification
+                self.users.lock().await.insert(username.clone(), User { 
+                    username: username.clone(), 
+                    y1: user.y1,
+                    y2: user.y2,
+                    challenge,
+                });
+                // respond with the random challenge for answer & verification from client
+                Ok(Response::new(AuthenticationChallengeResponse {
+                    auth_id: user.username,
+                    c: challenge,
+                }))
+            }
+            None => {
+                Err(Status::not_found("User not found"))
+            }
+        }
     }
     async fn verify_authentication(
         &self,

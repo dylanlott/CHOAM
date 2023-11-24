@@ -24,7 +24,7 @@ fn main() {
     // ----- schnorr ------ // 
     // y1
     // h = g^x mod p
-    let _h = _generator.modpow(&_x_secret, &_prime);
+    let y1 = _generator.modpow(&_x_secret, &_prime);
 
     // ----- random _r ------ // 
 
@@ -36,13 +36,19 @@ fn main() {
     // y2
     // remember: _g and _p are public information here. _r is the prover's challenge.
     // prover generates a new _t from their previous _r
-    let _t: BigUint = _generator.modpow(&_r, &_prime);
+    let y2: BigUint = _generator.modpow(&_r, &_prime);
     // > note: t is what you would save as the _verifier_ 
 
     // ----- AuthenticationChallengeResponse ------ // 
 
     // now, verifier (server) would send a random challenge, c, typically upon a 
     let _challenge = BigUint::from(rand::thread_rng().gen_range(0u32..10));
+
+
+
+    // IF YOU ARE READING THIS, YOU ARE HERE 🌎 🗺️ IN THE PROCESS
+
+
 
     // prover now takes the challenge and computes an answer from 
     // their own previous _r and the challenge _c
@@ -51,7 +57,7 @@ fn main() {
 
     // next, the verifier checks the answer: 
     let left = _generator.modpow(&_answer, &_prime);
-    let right = (&_t * &_h.modpow(&_challenge, &_prime)) % &_prime; 
+    let right = (&y2 * &y1.modpow(&_challenge, &_prime)) % &_prime; 
 
     if left == right {
         println!("holy shit, this is zero knowledge: {}=={}", left, right)

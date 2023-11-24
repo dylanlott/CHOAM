@@ -44,12 +44,6 @@ fn main() {
     // now, verifier (server) would send a random challenge, c, typically upon a 
     let _challenge = BigUint::from(rand::thread_rng().gen_range(0u32..10));
 
-
-
-    // IF YOU ARE READING THIS, YOU ARE HERE 🌎 🗺️ IN THE PROCESS
-
-
-
     // prover now takes the challenge and computes an answer from 
     // their own previous _r and the challenge _c
     let _answer = &_r + &_challenge * &_x_secret;

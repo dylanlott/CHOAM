@@ -17,6 +17,9 @@ prost = "0.12.3"
 rand = "0.8.5"
 tokio = { version = "1.34.0", features = ["full"] }
 tonic = "0.10.2"
+jsonwebtoken = "9"
+serde = { version = "1.0", features = ["derive"] }
+chrono = "0.4.31"
 
 [build-dependencies]
 tonic-build = "0.10"

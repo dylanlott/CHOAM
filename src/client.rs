@@ -1,5 +1,5 @@
 use tonic::transport::Channel;
-use zkp_auth::auth_client::AuthClient;
+use zkp_auth::{auth_client::AuthClient, RegisterRequest};
 
 pub mod zkp_auth {
     tonic::include_proto!("zkp_auth");
@@ -16,7 +16,13 @@ impl ZKPAuthClient {
     }
 
     pub async fn send_register_request() {
-        
+
+        let req = tonic::Request::new(RegisterRequest{
+            user: "foo".to_string(),
+            y1: 0, // TODO 
+            y2: 0, // TODO
+        });
+
     }
 }
 

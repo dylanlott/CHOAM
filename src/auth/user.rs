@@ -1,9 +1,8 @@
-use num_bigint::BigUint;
+use num_bigint::BigInt;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct User {
-    username: String,
-    h: BigUint,
-    r: BigUint,
-    t: BigUint,
+    pub username: String,
+    pub y1: BigInt,
+    pub y2: BigInt,
 }

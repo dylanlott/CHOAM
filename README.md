@@ -19,6 +19,13 @@ To test this script out, you need to run the server locally and then run the cli
 
 The client runs an automatic connection protocol and stores the token it receives from the authentication request.
 
+## Structure
+
+`src/main.rs` contains a heavily commented walk-through of the Chaum-Pedersen protocol.
+`src/server.rs` contains the gRPC server implementation for authenticating against.
+`src/client.rs` contains the gRPC client implementation that authenticates itself against the server.
+`src/proto/` contains the proto file, which was provided as an exercise.
+
 ## Related Reading
 
 - [Zero-knowledge proof](https://en.wikipedia.org/wiki/Zero-knowledge_proof)

@@ -2,6 +2,8 @@
 
 > **CHOAM**: The Chaum-Pedersen Heighliner Orbital Assault Machine.
 
+*tl;dr* - an authentication server that uses zero-knowledge proofs to authenticate requests and hand out JWTs for authorization.
+
 I've been reading a lot of Dune lately, so I present to you *CHOAM*, a Chaum-Pedersen protocol implementation in GRPC and Rust. Chaum-Pedersen is a Sigma protocol for [zero-knowledge proofs](https://en.wikipedia.org/wiki/Zero-knowledge_proof).
 
 ![CHOAM In Action](screenshot.png)

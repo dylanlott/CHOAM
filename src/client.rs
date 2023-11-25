@@ -1,5 +1,6 @@
-use num_bigint::{BigInt, ToBigInt};
+use num_bigint::BigInt;
 use rand::Rng;
+use std::convert::TryInto;
 use tonic::{transport::Channel, Request, Response, Status};
 use zkp_auth::{
     auth_client::AuthClient, AuthenticationAnswerResponse, AuthenticationChallengeResponse,
@@ -40,28 +41,15 @@ impl ZKPAuthClient {
         println!("sending registration request for {}", username);
         let (y1, y2, random) = setup_y1_y2(BigInt::from(x));
 
-        println!("y1: {} - y2: {} - random: {}", y1, y2, random);
-
-        // TODO Handle signs in all of these 
-        let (_, y1b) = y1.to_bytes_le();
-        let _y1 = vec_to_i64(y1b);
-        
-        let (_, y2b) = y2.to_bytes_le();
-        let _y2 = vec_to_i64(y2b);
-        
-        let (_, rb) = random.to_bytes_le();
-        let _random = vec_to_i64(rb);
-
-       println!("_y1: {} - _y2: {} - _random: {}", _y1, _y2, _random);
-
-        // self.user.random = random;
-        // self.user.username = username.to_string();
-        // self.user.y1 = BigInt::from(y1);
-        // self.user.y2 = BigInt::from(y2);
+        self.user.random = BigInt::from(random);
+        self.user.username = username.clone();
+        self.user.y1 = BigInt::from(y1);
+        self.user.y2 = BigInt::from(y2);
 
         let req = Request::new(RegisterRequest {
-            user: username.to_string(),
-            ..Default::default()
+            user: username.to_string().clone(),
+            y1,
+            y2,
         });
 
         match self.client.register(req).await {
@@ -74,7 +62,7 @@ impl ZKPAuthClient {
             }
         }
 
-        (_y1, _y2, _random)
+        (y1, y2, random)
     }
 
     pub async fn send_auth_challenge(
@@ -103,24 +91,56 @@ impl ZKPAuthClient {
     ) -> Result<Response<AuthenticationAnswerResponse>, Status> {
         println!("sending authentication challenge");
 
-        let _s = s.bits().clone();
-        let req = AuthenticationAnswerRequest {
-            auth_id: self.user.username.clone(),
-            s: _s as i64,
-        };
+        let result: Result<i64, _> = s.try_into();
+        match result {
+            Ok(i) => { 
+                self.user.challenge = i;
+                let req = AuthenticationAnswerRequest {
+                    auth_id: self.user.username.clone(),
+                    s: i,
+                };
 
-        return self.client.verify_authentication(req).await;
+                println!("challenge: {}", i);
+
+                return self.client.verify_authentication(req).await;
+            },
+            Err(e) => panic!("Failed to convert: {:?}", e),
+        }
+
     }
 }
 
-fn setup_y1_y2(x: BigInt) -> (BigInt, BigInt, BigInt) {
+fn setup_y1_y2(x: BigInt) -> (i64, i64, i64) {
     println!("initializing knowledge generation");
     let generator = BigInt::from(GENERATOR);
     let prime = BigInt::from(PRIME);
     let random = BigInt::from(rand::thread_rng().gen_range(1u32..100));
     let y1 = generator.modpow(&x, &prime);
     let y2 = generator.modpow(&random, &prime);
-    (y1, y2, random)
+
+    let mut _y1: i64 = 0;
+    let mut _y2: i64 = 0;
+    let mut _random: i64 = 0;
+
+    let result: Result<i64, _> = y1.try_into();
+    match result {
+        Ok(i) => { _y1 = i },
+        Err(e) => panic!("Failed to convert: {:?}", e),
+    }
+
+    let result: Result<i64, _> = y2.try_into();
+    match result {
+        Ok(i) => { _y2 = i },
+        Err(e) => panic!("Failed to convert: {:?}", e),
+    }
+
+    let result: Result<i64, _> = random.try_into();
+    match result {
+        Ok(i) => {_random = i},
+        Err(e) => panic!("Failed to convert: {:?}", e),
+    }
+
+    (_y1, _y2, _random)
 }
 
 #[tokio::main]
@@ -136,13 +156,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .send_register_request("shakezula".to_string(), secret)
         .await;
 
-    println!("registration successful: r1 {} - r2 {} - RANDOM: {}", r1, r2, random);
+    println!(
+        "registration successful: r1 {} - r2 {} - RANDOM: {}",
+        r1, r2, random
+    );
     println!("requesting authentication challenge");
 
     match client.send_auth_challenge(r1, r2).await {
         Ok(resp) => {
             let msg = resp.into_inner();
-            println!( "computing response from challenge parameers: {}", msg.c);
+            println!("computing response from challenge parameers: {}", msg.c);
 
             let _r = client.user.random.clone();
             let challenge = msg.c.clone();
@@ -169,14 +192,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
-}
-
-fn vec_to_i64(bytes: Vec<u8>) -> i64 {
-    let mut result: i64 = 0;
-
-    for &byte in bytes.iter() {
-        result = (result << 8) | (byte as i64);
-    }
-
-    result
 }

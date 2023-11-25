@@ -6,6 +6,7 @@ use zkp_auth::{
     auth_client::AuthClient, AuthenticationAnswerResponse, AuthenticationChallengeResponse,
     RegisterRequest,
 };
+use tracing::{error, info};
 
 use crate::zkp_auth::{AuthenticationAnswerRequest, AuthenticationChallengeRequest};
 
@@ -38,7 +39,7 @@ impl ZKPAuthClient {
     }
 
     pub async fn send_register_request(&mut self, username: String, x: i64) -> (i64, i64, i64) {
-        println!("sending registration request for {}", username);
+        info!("sending registration request for {}", username);
         let (y1, y2, random) = setup_y1_y2(BigInt::from(x));
 
         self.user.random = BigInt::from(random);
@@ -55,10 +56,10 @@ impl ZKPAuthClient {
         match self.client.register(req).await {
             Ok(resp) => {
                 let msg = resp.into_inner();
-                println!("received successful registration request: {:?}", msg)
+                info!("received successful registration request: {:?}", msg)
             }
             Err(status) => {
-                eprintln!("error: failed to register: {}", status.message())
+                error!("error: failed to register: {}", status.message())
             }
         }
 
@@ -70,7 +71,7 @@ impl ZKPAuthClient {
         r1: i64,
         r2: i64,
     ) -> Result<Response<AuthenticationChallengeResponse>, Status> {
-        println!("sending authentication challenge");
+        info!("sending authentication challenge");
 
         let req = Request::new(AuthenticationChallengeRequest {
             user: "shakezula".to_string(),
@@ -80,7 +81,7 @@ impl ZKPAuthClient {
 
         let resp = self.client.create_authentication_challenge(req).await;
 
-        println!("received authentication challenge: {:?}", resp);
+        info!("received authentication challenge: {:?}", resp);
 
         return resp;
     }
@@ -89,7 +90,7 @@ impl ZKPAuthClient {
         &mut self,
         s: BigInt,
     ) -> Result<Response<AuthenticationAnswerResponse>, Status> {
-        println!("sending authentication challenge");
+        info!("sending authentication challenge");
 
         let result: Result<i64, _> = s.try_into();
         match result {
@@ -100,7 +101,7 @@ impl ZKPAuthClient {
                     s: i,
                 };
 
-                println!("challenge: {}", i);
+                info!("challenge: {}", i);
 
                 return self.client.verify_authentication(req).await;
             },
@@ -111,7 +112,7 @@ impl ZKPAuthClient {
 }
 
 fn setup_y1_y2(x: BigInt) -> (i64, i64, i64) {
-    println!("initializing knowledge generation");
+    info!("initializing knowledge generation");
     let generator = BigInt::from(GENERATOR);
     let prime = BigInt::from(PRIME);
     let random = BigInt::from(rand::thread_rng().gen_range(1u32..100));
@@ -145,49 +146,52 @@ fn setup_y1_y2(x: BigInt) -> (i64, i64, i64) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("**WARS**: Weapon Authentication Response System --- starting up");
+    // init logger
+    tracing_subscriber::fmt::init();
+
+    info!("**WARS**: Weapon Authentication Response System --- starting up");
     let secret = 42i64; // TODO get from CLI prompt
     let zkp_client = ZKPAuthClient::new("://[::1]:50051".to_string());
 
-    println!("established connection with CHOAM host");
+    info!("established connection with CHOAM host");
 
     let mut client = zkp_client.await?;
     let (r1, r2, random) = client
         .send_register_request("shakezula".to_string(), secret)
         .await;
 
-    println!(
+    info!(
         "registration successful: r1 {} - r2 {} - RANDOM: {}",
         r1, r2, random
     );
-    println!("requesting authentication challenge");
+    info!("requesting authentication challenge");
 
     match client.send_auth_challenge(r1, r2).await {
         Ok(resp) => {
             let msg = resp.into_inner();
-            println!("computing response from challenge parameers: {}", msg.c);
+            info!("computing response from challenge parameers: {}", msg.c);
 
             let _r = client.user.random.clone();
             let challenge = msg.c.clone();
-            println!("RANDOM IS: {} - challenge: {}", _r, challenge);
+            info!("RANDOM IS: {} - challenge: {}", _r, challenge);
             let answer = _r + challenge * secret;
 
-            println!("computed challenge answer: {}", answer);
+            info!("computed challenge answer: {}", answer);
 
             // respond with the answer to the random challenge
             match client.send_auth_answer(answer).await {
                 Err(err) => {
-                    eprintln!("failed to authenticate: {}", err.message())
+                    error!("failed to authenticate: {}", err.message())
                 }
                 Ok(resp) => {
                     let msg = resp.into_inner();
-                    println!("authentication successful ✅");
+                    info!("authentication successful ✅");
                     client.token = msg.session_id;
                 }
             }
         }
         Err(status) => {
-            eprintln!("auth challenge error: {}", status.message())
+            error!("auth challenge error: {}", status.message())
         }
     }
 

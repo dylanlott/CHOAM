@@ -12,7 +12,8 @@ use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Result, Status};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use chrono::{Utc, Duration};
-
+use tracing_subscriber;
+use tracing::{info, error};
 mod auth;
 
 const PRIME: u32 = 53239;
@@ -29,7 +30,7 @@ impl Auth for AuthService {
         request: Request<RegisterRequest>,
     ) -> Result<Response<RegisterResponse>, Status> {
         let req = request.into_inner();
-        println!("received registration request: {}", req.clone().user);
+        info!("received registration request: {}", req.clone().user);
 
         self.add_user(
             req.user.to_string(),
@@ -52,7 +53,7 @@ impl Auth for AuthService {
         let req = request.into_inner();
         let username = req.user.clone();
 
-        println!("received authentication challenge request");
+        info!("received authentication challenge request");
 
         match self.get_user(req.user).await {
             Some(user) => {
@@ -69,7 +70,7 @@ impl Auth for AuthService {
                     },
                 );
 
-                println!("responding with authentication challenge");
+                info!("responding with authentication challenge");
 
                 // respond with the random challenge for answer & verification from client
                 Ok(Response::new(AuthenticationChallengeResponse {
@@ -95,20 +96,20 @@ impl Auth for AuthService {
                 let challenge = &BigInt::from(user.challenge);
                 let answer = &BigInt::from(req.s);
 
-                println!("challenge: {}", challenge);
-                println!("answer: {}", answer);
+                info!("challenge: {}", challenge);
+                info!("answer: {}", answer);
                 
                 // construct the equation
                 let left = _generator.modpow(answer, _prime);
                 let right = (user.clone().y2 * user.clone().y1.modpow(challenge, _prime)) % _prime;
 
-                println!("left: {} - right: {}", left, right);
+                info!("left: {} - right: {}", left, right);
                 
                 // compare equality of left to right
                 if left == right {
                     match generate_jwt() {
                         Ok(token) => {
-                            println!("generated authorization token for {}: {}", username.clone(), token);
+                            info!("generated authorization token for {}: {}", username.clone(), token);
                             let resp = Response::new(AuthenticationAnswerResponse { 
                                 session_id: token,
                             });
@@ -119,12 +120,12 @@ impl Auth for AuthService {
                         },
                     }
                 } else {
-                    eprintln!("🚩 failed validation: {}", username.clone());
+                    error!("🚩 failed validation: {}", username.clone());
                     Err(Status::not_found("User not found"))
                 }
             }
             None => {
-                eprintln!("failed to find user: {}", username.clone());
+                error!("failed to find user: {}", username.clone());
                 Err(Status::permission_denied("denied"))
             }
         }
@@ -171,7 +172,12 @@ fn generate_jwt() -> Result<String, jsonwebtoken::errors::Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("**CHOAM**: Chaum-Pedersen Heighliner Orbital Assault Machine --- starting up");
+    info!("**CHOAM**: Chaum-Pedersen Heighliner Orbital Assault Machine --- starting up");
+
+    // Initialize the logger
+    tracing_subscriber::fmt::init();
+
+
     let addr = "[::1]:50051".parse()?;
     let svc = AuthService {
         users: Arc::new(Mutex::new(HashMap::new())),

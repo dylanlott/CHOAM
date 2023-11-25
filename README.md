@@ -4,7 +4,7 @@
 
 I've been reading a lot of Dune lately, so I present to you *CHOAM*, a Chaum-Pedersen protocol implementation in GRPC and Rust. Chaum-Pedersen is a Sigma protocol for [zero-knowledge proofs](https://en.wikipedia.org/wiki/Zero-knowledge_proof).
 
-![CHOAM In Action](image.png)
+![CHOAM In Action](screenshot.png)
 
 ## I am not a cryptographer, and I'm certainly not *your* cryptographer
 

@@ -10,12 +10,12 @@ I've been reading a lot of Dune lately, so I present to you *CHOAM*, a Chaum-Ped
 
 This is not production ready code, and it should absolutely not be used for anything in production period.
 
-## Run
+## Running CHOAM
 
 To test this script out, you need to run the server locally and then run the client to authenticate with the server.
 
 `cargo run-server` to run the CHOAM server.
-`cargo run-client`d to run the client.
+`cargo run-client` to run the client.
 
 The client runs an automatic connection protocol and stores the token it receives from the authentication request.
 

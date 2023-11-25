@@ -172,11 +172,9 @@ fn generate_jwt() -> Result<String, jsonwebtoken::errors::Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    info!("**CHOAM**: Chaum-Pedersen Heighliner Orbital Assault Machine --- starting up");
-
-    // Initialize the logger
     tracing_subscriber::fmt::init();
 
+    info!("**CHOAM**: Chaum-Pedersen Heighliner Orbital Assault Machine --- starting up ⬆️");
 
     let addr = "[::1]:50051".parse()?;
     let svc = AuthService {

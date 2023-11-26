@@ -70,8 +70,6 @@ impl Auth for AuthService {
                     },
                 );
 
-                info!("responding with authentication challenge");
-
                 // respond with the random challenge for answer & verification from client
                 Ok(Response::new(AuthenticationChallengeResponse {
                     auth_id: user.username,
@@ -96,20 +94,17 @@ impl Auth for AuthService {
                 let challenge = &BigInt::from(user.challenge);
                 let answer = &BigInt::from(req.s);
 
-                info!("challenge: {}", challenge);
-                info!("answer: {}", answer);
+                info!("challenge issued for {}", username);
                 
                 // construct the equation
                 let left = _generator.modpow(answer, _prime);
                 let right = (user.clone().y2 * user.clone().y1.modpow(challenge, _prime)) % _prime;
 
-                info!("left: {} - right: {}", left, right);
-                
                 // compare equality of left to right
                 if left == right {
                     match generate_jwt() {
                         Ok(token) => {
-                            info!("generated authorization token for {}: {}", username.clone(), token);
+                            info!("generated authorization token for {}", username.clone());
                             let resp = Response::new(AuthenticationAnswerResponse { 
                                 session_id: token,
                             });

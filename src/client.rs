@@ -38,28 +38,34 @@ impl ZKPAuthClient {
         })
     }
 
+    // send_register_request sends a registration request for the given 
+    // username and secret value. 
     pub async fn send_register_request(&mut self, username: String, x: i64) -> (i64, i64, i64) {
         info!("sending registration request for {}", username);
+
+        // calculate y1, y2, and random value from the provided secret
         let (y1, y2, random) = setup_y1_y2(BigInt::from(x));
 
+        // set internal values for later user
         self.user.random = BigInt::from(random);
         self.user.username = username.clone();
         self.user.y1 = BigInt::from(y1);
         self.user.y2 = BigInt::from(y2);
 
+        // format a registration request
         let req = Request::new(RegisterRequest {
             user: username.to_string().clone(),
             y1,
             y2,
         });
 
+        // send the registration request and handle errors if any occur
         match self.client.register(req).await {
-            Ok(resp) => {
-                let msg = resp.into_inner();
-                info!("received successful registration request: {:?}", msg)
+            Ok(_) => {
+                info!("registration successful ✅")
             }
             Err(status) => {
-                error!("error: failed to register: {}", status.message())
+                error!("failed to register {}: {}", username, status.message())
             }
         }
 
@@ -81,7 +87,7 @@ impl ZKPAuthClient {
 
         let resp = self.client.create_authentication_challenge(req).await;
 
-        info!("received authentication challenge: {:?}", resp);
+        info!("received authentication challenge");
 
         return resp;
     }
@@ -100,8 +106,6 @@ impl ZKPAuthClient {
                     auth_id: self.user.username.clone(),
                     s: i,
                 };
-
-                info!("challenge: {}", i);
 
                 return self.client.verify_authentication(req).await;
             },
@@ -146,37 +150,34 @@ fn setup_y1_y2(x: BigInt) -> (i64, i64, i64) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // init logger
     tracing_subscriber::fmt::init();
 
-    info!("**WARS**: Weapon Authentication Response System --- starting up");
-    let secret = 42i64; // TODO get from CLI prompt
+    info!("**CHOAM**: Authentication client starting up ⬆️");
+
     let zkp_client = ZKPAuthClient::new("://[::1]:50051".to_string());
 
+    let secret = 42i64; // TODO get from CLI prompt
+    
     info!("established connection with CHOAM host");
 
     let mut client = zkp_client.await?;
-    let (r1, r2, random) = client
+    let (r1, r2, _) = client
         .send_register_request("shakezula".to_string(), secret)
         .await;
 
-    info!(
-        "registration successful: r1 {} - r2 {} - RANDOM: {}",
-        r1, r2, random
-    );
     info!("requesting authentication challenge");
 
     match client.send_auth_challenge(r1, r2).await {
         Ok(resp) => {
             let msg = resp.into_inner();
-            info!("computing response from challenge parameers: {}", msg.c);
+            
+            info!("computing response from challenge parameters");
 
-            let _r = client.user.random.clone();
+            let random = client.user.random.clone();
             let challenge = msg.c.clone();
-            info!("RANDOM IS: {} - challenge: {}", _r, challenge);
-            let answer = _r + challenge * secret;
+            let answer = random + challenge * secret;
 
-            info!("computed challenge answer: {}", answer);
+            info!("computed challenge answer");
 
             // respond with the answer to the random challenge
             match client.send_auth_answer(answer).await {
@@ -185,7 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Ok(resp) => {
                     let msg = resp.into_inner();
-                    info!("authentication successful ✅");
+                    info!("authentication successful 🔑");
                     client.token = msg.session_id;
                 }
             }

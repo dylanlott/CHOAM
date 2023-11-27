@@ -16,15 +16,20 @@ pub mod zkp_auth {
     tonic::include_proto!("zkp_auth");
 }
 
+// public values used for the calculation of the logarithms used in the swap.
 const PRIME: u32 = 53239;
 const GENERATOR: u32 = 2;
 
+// ZKPAuthClient holds a reference to the client, the user's parameters,
+// and the token, if any has been acquired.
 pub struct ZKPAuthClient {
     client: AuthClient<Channel>,
     user: auth::user::User,
     token: String,
 }
 
+// ZKPAuthClient implements the Chaum-Pedersen Orbital Authentication Machine
+// protocol from the client perspective.
 impl ZKPAuthClient {
     pub async fn new(url: String) -> Result<Self, Box<dyn std::error::Error>> {
         let client = AuthClient::connect(url).await?;
@@ -39,7 +44,8 @@ impl ZKPAuthClient {
     }
 
     // send_register_request sends a registration request for the given 
-    // username and secret value. 
+    // username and secret value. it sets up y1 and y2 parameters as well
+    // as the random value used for computing a challenge.
     pub async fn send_register_request(&mut self, username: String, x: i64) -> (i64, i64, i64) {
         info!("sending registration request for {}", username);
 
@@ -72,6 +78,8 @@ impl ZKPAuthClient {
         (y1, y2, random)
     }
 
+    // send_auth_challenge gets a new challenge from the verifier which
+    // allows a new computation of `s`
     pub async fn send_auth_challenge(
         &mut self,
         r1: i64,
@@ -108,13 +116,14 @@ impl ZKPAuthClient {
                 };
 
                 return self.client.verify_authentication(req).await;
-            },
+            }
             Err(e) => panic!("Failed to convert: {:?}", e),
         }
-
     }
 }
 
+// setup_y1_y1 returns the y1 and y2 values along with the random seed used to 
+// generate them.
 fn setup_y1_y2(x: BigInt) -> (i64, i64, i64) {
     info!("initializing knowledge generation");
     let generator = BigInt::from(GENERATOR);
@@ -135,13 +144,13 @@ fn setup_y1_y2(x: BigInt) -> (i64, i64, i64) {
 
     let result: Result<i64, _> = y2.try_into();
     match result {
-        Ok(i) => { _y2 = i },
+        Ok(i) => _y2 = i,
         Err(e) => panic!("Failed to convert: {:?}", e),
     }
 
     let result: Result<i64, _> = random.try_into();
     match result {
-        Ok(i) => {_random = i},
+        Ok(i) => _random = i,
         Err(e) => panic!("Failed to convert: {:?}", e),
     }
 

@@ -53,7 +53,7 @@ impl Auth for AuthService {
         let req = request.into_inner();
         let username = req.user.clone();
 
-        info!("received authentication challenge request");
+        info!("received authentication challenge request for {}", username);
 
         match self.get_user(req.user).await {
             Some(user) => {

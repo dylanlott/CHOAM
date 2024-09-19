@@ -1,6 +1,6 @@
 # CHOAM
 
-> **CHOAM**: The Chaum-Pedersen Heighliner Orbital Authentication Machine.
+> **CHOAM**: The Chaum-Pedersen High-Securty Ordinal Authentication Machine.
 
 *tl;dr* - an authentication server that uses a custom chaum-pedersen protocol implementation to authenticate requests and hand out JWTs for authorization.
 

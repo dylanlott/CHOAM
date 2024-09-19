@@ -19,7 +19,7 @@ To test this script out, you need to run the server locally and then run the cli
 - `cargo run-server` to run the CHOAM server.
 - `cargo run-client` to run the client.
 - `cargo build-client` builds the client binary.
-- `card build-server` builds the server binary.
+- `cargo build-server` builds the server binary.
 
 The client runs an automatic connection protocol and stores the token it receives from the authentication request.
 
@@ -42,4 +42,4 @@ The client runs an automatic connection protocol and stores the token it receive
 - [Zero-knowledge proof](https://en.wikipedia.org/wiki/Zero-knowledge_proof)
 - [Publicly verifiable secret sharing](https://en.wikipedia.org/wiki/Publicly_Verifiable_Secret_Sharing)
 
-*The spice must flow.*
+### *The spice must flow.*
